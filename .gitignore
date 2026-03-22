@@ -7,4 +7,3 @@ model.pkl
 artifacts/
 data/processed_data.json
 .DS_Store
-data/Telco-Customer-Churn.csv
