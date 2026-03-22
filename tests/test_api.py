@@ -1,6 +1,6 @@
 """
 tests/test_api.py
-Unit tests for both rule-based and ML prediction endpoints.
+Unit tests for Stage 1 rule-based prediction endpoint.
 Run: pytest tests/ -v
 """
 
@@ -18,7 +18,6 @@ client = TestClient(app)
 VALID_RISK_VALUES = {"HIGH", "MEDIUM", "LOW"}
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 def post_predict(payload: dict) -> dict:
     response = client.post("/predict-risk", json=payload)
     assert response.status_code == 200, f"Unexpected status: {response.status_code}"
@@ -39,10 +38,12 @@ def test_home():
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
-    assert "model_loaded" in response.json()
+    # Stage 1 returns status and stage only — no model_loaded field
+    assert response.json()["status"] == "healthy"
+    assert response.json()["stage"] == 1
 
 
-# ── Rule engine: HIGH risk cases ──────────────────────────────────────────────
+# ── HIGH risk cases ───────────────────────────────────────────────────────────
 def test_high_risk_month_to_month_with_complaint():
     """Month-to-month + complaint ticket must return HIGH."""
     body = post_predict({
@@ -76,7 +77,7 @@ def test_high_risk_many_recent_tickets():
     assert body["risk"] == "HIGH"
 
 
-# ── Rule engine: MEDIUM risk cases ───────────────────────────────────────────
+# ── MEDIUM risk cases ─────────────────────────────────────────────────────────
 def test_medium_risk_charge_increase_with_tickets():
     """Charge increase + 3 recent tickets must return MEDIUM."""
     recent_tickets = [
@@ -93,9 +94,9 @@ def test_medium_risk_charge_increase_with_tickets():
     assert body["risk"] == "MEDIUM"
 
 
-# ── Rule engine: LOW risk cases ───────────────────────────────────────────────
+# ── LOW risk cases ────────────────────────────────────────────────────────────
 def test_low_risk_no_issues():
-    """Customer with no complaints, stable charges, annual contract → LOW."""
+    """No complaints, stable charges, annual contract → LOW."""
     body = post_predict({
         "monthly_charges": 50,
         "previous_month_charges": 50,
@@ -159,5 +160,6 @@ def test_metrics_endpoint():
     })
     response = client.get("/metrics")
     assert response.status_code == 200
-    assert "churn_predict_rule_total" in response.text
-    assert "churn_model_loaded" in response.text
+    # Stage 1 metrics use churn_requests_total
+    assert "churn_requests_total" in response.text
+    assert "churn_high_total" in response.text

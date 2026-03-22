@@ -27,28 +27,34 @@ app = FastAPI(
 
 _metrics = {"total": 0, "errors": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
 
+
 class Ticket(BaseModel):
-    type: Optional[str] = Field(None, example="complaint")
-    date: Optional[str] = Field(None, example="2026-03-01T10:00:00")
+    type: Optional[str] = Field(None, json_schema_extra={"example": "complaint"})
+    date: Optional[str] = Field(None, json_schema_extra={"example": "2026-03-01T10:00:00"})
     description: Optional[str] = None
 
+
 class CustomerData(BaseModel):
-    monthly_charges: float = Field(..., example=80.0)
-    previous_month_charges: float = Field(..., example=60.0)
-    contract_type: str = Field(..., example="Month-to-month")
+    monthly_charges: float = Field(..., json_schema_extra={"example": 80.0})
+    previous_month_charges: float = Field(..., json_schema_extra={"example": 60.0})
+    contract_type: str = Field(..., json_schema_extra={"example": "Month-to-month"})
     tickets: List[Ticket] = Field(default=[])
+
 
 class RiskResponse(BaseModel):
     risk: str
     engine: str = "rules"
 
+
 @app.get("/", tags=["Health"])
 def home():
     return {"status": "ok", "stage": "1 — Rule-based", "version": "1.0.0"}
 
+
 @app.get("/health", tags=["Health"])
 def health():
     return {"status": "healthy", "stage": 1}
+
 
 @app.post("/predict-risk", response_model=RiskResponse, tags=["Prediction"])
 def predict_risk(data: CustomerData):
@@ -71,6 +77,7 @@ def predict_risk(data: CustomerData):
         _metrics["errors"] += 1
         logger.error("Prediction error: %s", e)
         raise HTTPException(status_code=500, detail="Prediction failed.")
+
 
 @app.get("/metrics", response_class=PlainTextResponse, tags=["Observability"])
 def metrics():
