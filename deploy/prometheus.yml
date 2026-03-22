@@ -1,0 +1,12 @@
+# deploy/prometheus.yml
+# Prometheus scrape configuration for local docker-compose setup
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "churn-api"
+    static_configs:
+      - targets: ["churn-api:8000"]
+    metrics_path: /metrics
