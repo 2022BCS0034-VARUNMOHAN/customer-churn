@@ -1,4 +1,5 @@
 from datetime import datetime
+import pandas as pd
 import logging
 
 logger = logging.getLogger(__name__)
@@ -11,14 +12,14 @@ def compute_sentiment_score(tickets: list) -> float:
     """
     Simple keyword-based sentiment score.
     Returns a value between -1.0 (very negative) and +1.0 (very positive).
-    Complaint tickets with negative keywords score lower.
     """
     if not tickets:
         return 0.0
 
     total_score = 0.0
     for t in tickets:
-        description = (t.get("description", "") + " " + t.get("subject", "")).lower()
+        # Fix: use 'or ""' to safely handle None values
+        description = ((t.get("description") or "") + " " + (t.get("subject") or "")).lower()
         words = set(description.split())
 
         neg_hits = len(words & NEGATIVE_KEYWORDS)
@@ -57,7 +58,12 @@ def compute_avg_time_between_tickets(tickets: list) -> float:
     return round(sum(gaps) / len(gaps), 2)
 
 
-def extract_features(data: dict) -> list:
+def extract_features(data: dict) -> pd.DataFrame:
+    """
+    Extract features from customer data dict.
+    Returns a pandas DataFrame with named columns so sklearn
+    does not raise feature name warnings.
+    """
     tickets = data.get("tickets", [])
     monthly = data.get("monthly_charges", 0)
     previous = data.get("previous_month_charges", 0)
@@ -94,7 +100,7 @@ def extract_features(data: dict) -> list:
     sentiment = compute_sentiment_score(tickets)
     avg_gap = compute_avg_time_between_tickets(tickets)
 
-    return [[
+    return pd.DataFrame([[
         t7,
         t30,
         t90,
@@ -104,7 +110,7 @@ def extract_features(data: dict) -> list:
         1 if contract.lower() == "month-to-month" else 0,
         sentiment,
         avg_gap,
-    ]]
+    ]], columns=FEATURE_NAMES)
 
 
 FEATURE_NAMES = [

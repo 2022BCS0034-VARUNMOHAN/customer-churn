@@ -42,7 +42,8 @@ with open(data_path) as f:
 # ── Build feature matrix using the same extract_features() as inference ───────
 rows = []
 for customer in data:
-    features_row = extract_features(customer)[0]  # returns [[...]]
+    features_row = extract_features(customer).values[0].tolist()
+ # returns [[...]]
 
     # Derive churn label (same logic as original)
     tickets = customer.get("tickets", [])
