@@ -1,15 +1,12 @@
-name: CI Pipeline
+name: CI Pipeline — Stage 1
 
 on:
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
+      - stage1
 
 jobs:
-  test-and-build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,27 +21,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # ── Run unit tests BEFORE training ──────────────────────────────────────
-      # The ML endpoint returns 503 when model.pkl is absent, which is expected.
       - name: Run unit tests
         run: pytest tests/ -v --tb=short
 
-      # ── Train model and generate evaluation artifacts ────────────────────────
-      - name: Train model
-        run: python scripts/train.py
-
-      # ── Build Docker image ───────────────────────────────────────────────────
       - name: Build Docker image
-        run: docker build -t churn-ml:latest .
-
-      # ── Upload model + all evaluation artifacts ──────────────────────────────
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: model-artifacts
-          path: |
-            model.pkl
-            artifacts/metrics.txt
-            artifacts/roc_curve.png
-            artifacts/pr_curve.png
-            artifacts/feature_importance.png
+        run: docker build -t churn-ml-stage1 .
