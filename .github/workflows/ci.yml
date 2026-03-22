@@ -1,12 +1,12 @@
-name: CI Pipeline — Stage 1
+name: CI Pipeline — Stage 2
 
 on:
   push:
     branches:
-      - stage1
+      - stage2
 
 jobs:
-  test:
+  test-and-build:
     runs-on: ubuntu-latest
 
     steps:
@@ -21,8 +21,25 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Prepare data
+        run: python scripts/prepare_data.py
+
+      - name: Train model
+        run: python scripts/train.py
+
       - name: Run unit tests
         run: pytest tests/ -v --tb=short
 
       - name: Build Docker image
-        run: docker build -t churn-ml-stage1 .
+        run: docker build -t churn-ml-stage2 .
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts
+          path: |
+            model.pkl
+            artifacts/
+```
+
+After saving both files, run these commands one by one:
