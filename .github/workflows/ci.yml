@@ -1,4 +1,4 @@
-name: CI Pipeline — Stage 2
+name: CI Pipeline - Stage 2
 
 on:
   push:
@@ -40,6 +40,3 @@ jobs:
           path: |
             model.pkl
             artifacts/
-```
-
-After saving both files, run these commands one by one:
