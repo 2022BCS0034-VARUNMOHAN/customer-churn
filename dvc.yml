@@ -1,0 +1,65 @@
+# dvc.yaml
+#
+# What is DVC (Data Version Control)?
+# ------------------------------------
+# Git tracks CODE changes. DVC tracks DATA + MODEL changes.
+#
+# Without DVC: "Which data was used to train model v3?" — nobody knows!
+# With DVC   : Every model version is linked to the exact data it was trained on.
+#
+# This file defines the ML pipeline as a series of "stages".
+# Each stage has:
+#   - cmd    : the command to run
+#   - deps   : inputs (if these change → stage re-runs)
+#   - outs   : outputs (DVC tracks these files)
+#   - metrics: files that contain evaluation numbers (DVC can compare across runs)
+#
+# Run the pipeline:
+#   dvc repro          ← runs only stages whose inputs have changed
+#   dvc repro --force  ← runs all stages regardless
+#
+# Compare runs:
+#   dvc metrics show   ← shows metrics for current run
+#   dvc metrics diff   ← compares current vs last committed run
+
+stages:
+  # ── Stage 1: Prepare data ──────────────────────────────────────────────────
+  # Converts raw CSV → processed JSON
+  prepare:
+    cmd: python scripts/prepare_data.py
+    deps:
+      - scripts/prepare_data.py # if this script changes → re-run
+      - data/Telco-Customer-Churn.csv # if raw data changes → re-run
+    outs:
+      - data/processed_data.json # DVC will track this file's hash
+
+  # ── Stage 2: Train model ───────────────────────────────────────────────────
+  # Reads processed data → trains model → saves artifacts
+  train:
+    cmd: python scripts/train.py
+    deps:
+      - scripts/train.py # if training code changes → re-run
+      - app/features.py # if feature logic changes → re-run
+      - data/processed_data.json # if data changes → re-run
+    outs:
+      - model.pkl # DVC tracks the model binary
+      - artifacts/feature_importance.png
+      - artifacts/roc_curve.png
+      - artifacts/pr_curve.png
+    metrics:
+      - artifacts/metrics.txt: # DVC reads this for metric comparison
+          cache: false # don't store in DVC cache (it's small)
+
+  # ── Stage 3: Monitor drift ─────────────────────────────────────────────────
+  monitor:
+    cmd: python scripts/monitor.py
+    deps:
+      - scripts/monitor.py
+      - app/features.py
+      - data/processed_data.json
+      - model.pkl
+    outs:
+      - artifacts/monitoring/drift_report.json:
+          cache: false
+      - artifacts/monitoring/drift_summary.txt:
+          cache: false

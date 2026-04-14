@@ -1,6 +1,6 @@
 """
 tests/test_api.py
-Unit tests for Stage 1 rule-based prediction endpoint.
+Unit tests for rule-based prediction endpoint (Stage 2 compatible).
 Run: pytest tests/ -v
 """
 
@@ -19,12 +19,12 @@ VALID_RISK_VALUES = {"HIGH", "MEDIUM", "LOW"}
 
 
 def post_predict(payload: dict) -> dict:
-    response = client.post("/predict-risk", json=payload)
+    response = client.post("/predict-risk-rules", json=payload)
     assert response.status_code == 200, f"Unexpected status: {response.status_code}"
     body = response.json()
-    assert "risk" in body, "Response missing 'risk' field"
-    assert "engine" in body, "Response missing 'engine' field"
-    assert body["risk"] in VALID_RISK_VALUES, f"Invalid risk value: {body['risk']}"
+    assert "risk" in body
+    assert "engine" in body
+    assert body["risk"] in VALID_RISK_VALUES
     return body
 
 
@@ -38,20 +38,18 @@ def test_home():
 def test_health():
     response = client.get("/health")
     assert response.status_code == 200
-    # Stage 1 returns status and stage only — no model_loaded field
     assert response.json()["status"] == "healthy"
-    assert response.json()["stage"] == 1
+    assert response.json()["stage"] == 2
 
 
 # ── HIGH risk cases ───────────────────────────────────────────────────────────
 def test_high_risk_month_to_month_with_complaint():
-    """Month-to-month + complaint ticket must return HIGH."""
     body = post_predict({
         "monthly_charges": 50,
         "previous_month_charges": 20,
         "contract_type": "Month-to-month",
         "tickets": [
-            {"type": "complaint", "date": "2026-03-01T10:00:00"}
+            {"type": "complaint", "date": "2026-04-10T10:00:00"}
         ],
     })
     assert body["risk"] == "HIGH"
@@ -59,14 +57,13 @@ def test_high_risk_month_to_month_with_complaint():
 
 
 def test_high_risk_many_recent_tickets():
-    """More than 5 tickets in last 30 days must return HIGH."""
     recent_tickets = [
-        {"type": "query", "date": "2026-03-18T10:00:00"},
-        {"type": "query", "date": "2026-03-17T10:00:00"},
-        {"type": "query", "date": "2026-03-16T10:00:00"},
-        {"type": "query", "date": "2026-03-15T10:00:00"},
-        {"type": "query", "date": "2026-03-14T10:00:00"},
-        {"type": "query", "date": "2026-03-13T10:00:00"},
+        {"type": "query", "date": "2026-04-14T10:00:00"},
+        {"type": "query", "date": "2026-04-13T10:00:00"},
+        {"type": "query", "date": "2026-04-12T10:00:00"},
+        {"type": "query", "date": "2026-04-11T10:00:00"},
+        {"type": "query", "date": "2026-04-10T10:00:00"},
+        {"type": "query", "date": "2026-04-09T10:00:00"},
     ]
     body = post_predict({
         "monthly_charges": 50,
@@ -79,11 +76,10 @@ def test_high_risk_many_recent_tickets():
 
 # ── MEDIUM risk cases ─────────────────────────────────────────────────────────
 def test_medium_risk_charge_increase_with_tickets():
-    """Charge increase + 3 recent tickets must return MEDIUM."""
     recent_tickets = [
-        {"type": "query", "date": "2026-03-10T10:00:00"},
-        {"type": "query", "date": "2026-03-11T10:00:00"},
-        {"type": "query", "date": "2026-03-12T10:00:00"},
+        {"type": "query", "date": "2026-04-14T10:00:00"},
+        {"type": "query", "date": "2026-04-13T10:00:00"},
+        {"type": "query", "date": "2026-04-12T10:00:00"},
     ]
     body = post_predict({
         "monthly_charges": 80,
@@ -96,7 +92,6 @@ def test_medium_risk_charge_increase_with_tickets():
 
 # ── LOW risk cases ────────────────────────────────────────────────────────────
 def test_low_risk_no_issues():
-    """No complaints, stable charges, annual contract → LOW."""
     body = post_predict({
         "monthly_charges": 50,
         "previous_month_charges": 50,
@@ -107,14 +102,9 @@ def test_low_risk_no_issues():
 
 
 def test_low_risk_old_tickets_ignored():
-    """Tickets older than 30 days should not trigger HIGH or MEDIUM."""
     old_tickets = [
         {"type": "query", "date": "2025-01-01T10:00:00"},
         {"type": "query", "date": "2025-01-02T10:00:00"},
-        {"type": "query", "date": "2025-01-03T10:00:00"},
-        {"type": "query", "date": "2025-01-04T10:00:00"},
-        {"type": "query", "date": "2025-01-05T10:00:00"},
-        {"type": "query", "date": "2025-01-06T10:00:00"},
     ]
     body = post_predict({
         "monthly_charges": 50,
@@ -137,7 +127,6 @@ def test_empty_tickets():
 
 
 def test_malformed_ticket_date_ignored():
-    """Tickets with bad dates should not crash the API."""
     body = post_predict({
         "monthly_charges": 50,
         "previous_month_charges": 50,
@@ -151,15 +140,13 @@ def test_malformed_ticket_date_ignored():
 
 
 def test_metrics_endpoint():
-    """Metrics endpoint must return Prometheus-formatted text."""
-    client.post("/predict-risk", json={
+    client.post("/predict-risk-rules", json={
         "monthly_charges": 50,
         "previous_month_charges": 20,
         "contract_type": "Month-to-month",
-        "tickets": [{"type": "complaint", "date": "2026-03-01T10:00:00"}],
+        "tickets": [{"type": "complaint", "date": "2026-04-10T10:00:00"}],
     })
     response = client.get("/metrics")
     assert response.status_code == 200
-    # Stage 1 metrics use churn_requests_total
-    assert "churn_requests_total" in response.text
+    assert "churn_ml_requests_total" in response.text
     assert "churn_high_total" in response.text

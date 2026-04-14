@@ -1,10 +1,23 @@
+# Virtual environment
 venv/
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+
+# ML artifacts
 model.pkl
 artifacts/
+
+# MLflow tracking
+mlruns/
+scripts/mlruns/
+
+# Data (tracked via DVC)
 data/processed_data.json
-.DS_Store
 data/Telco-Customer-Churn.csv
+
+# OS files
+.DS_Store

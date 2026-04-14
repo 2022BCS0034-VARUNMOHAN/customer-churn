@@ -1,9 +1,28 @@
-fastapi>=0.111.0
-uvicorn[standard]>=0.29.0
-pydantic>=2.0.0
-joblib>=1.4.0
-scikit-learn>=1.4.0
-pandas>=2.2.0
-matplotlib>=3.8.0
-pytest>=8.0.0
-httpx>=0.27.0
+# requirements.txt
+# All Python packages needed for the project.
+# Install with: pip install -r requirements.txt
+
+# ── Web API ───────────────────────────────────────────────────────────────────
+fastapi>=0.111.0          # Web framework for our prediction API
+uvicorn[standard]>=0.29.0 # ASGI server that runs FastAPI
+pydantic>=2.0.0           # Data validation for API request/response models
+
+# ── ML & Data ─────────────────────────────────────────────────────────────────
+scikit-learn>=1.4.0       # ML algorithms + Pipeline + preprocessing
+pandas>=2.2.0             # DataFrames for feature engineering
+numpy>=1.26.0             # Numeric arrays
+matplotlib>=3.8.0         # Plotting evaluation curves
+joblib>=1.4.0             # Save/load model files (.pkl)
+
+# ── MLflow (Experiment Tracking + Model Registry) ─────────────────────────────
+mlflow>=2.12.0            # Track experiments, log metrics, register models
+
+# ── DVC (Data Version Control) ────────────────────────────────────────────────
+dvc>=3.49.0               # Version control for data + model artifacts
+# Optional DVC remote storage backends (uncomment what you use):
+# dvc[s3]>=3.49.0         # Amazon S3 remote storage
+# dvc[gdrive]>=3.49.0     # Google Drive remote storage
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest>=8.0.0             # Test framework
+httpx>=0.27.0             # HTTP client used by FastAPI test client
